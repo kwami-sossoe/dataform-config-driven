@@ -1,34 +1,28 @@
-# --- GCS Buckets ---
-
 resource "google_storage_bucket" "landing_zone" {
-  name                        = "off-raw-landing-${var.project_id}"
+  name                        = "${var.gcs_raw_landing_prefix}-${var.project_id}"
   location                    = var.region
   force_destroy               = true
   uniform_bucket_level_access = true
 }
 
 resource "google_storage_bucket" "landing_zone_test" {
-  name                        = "off-raw-landing-${var.project_prefix}-test"
+  name                        = "${var.gcs_raw_landing_prefix}-${var.project_prefix}-test"
   location                    = var.region
   force_destroy               = true
   uniform_bucket_level_access = true
 }
 
-# --- PubSub ---
-
 resource "google_pubsub_topic" "gcs_events" {
-  name    = "gcs-events"
+  name    = var.pubsub_topic_name
   project = var.project_id
 }
 
-# Allow GCS Service Agent to publish to the Topic
 resource "google_pubsub_topic_iam_member" "gcs_publisher" {
   topic  = google_pubsub_topic.gcs_events.name
   role   = "roles/pubsub.publisher"
   member = "serviceAccount:${data.google_storage_project_service_account.gcs_account.email_address}"
 }
 
-# Setup GCS Notification to Trigger PubSub
 resource "google_storage_notification" "bucket_notification" {
   bucket         = google_storage_bucket.landing_zone.name
   payload_format = "JSON_API_V1"
@@ -36,8 +30,6 @@ resource "google_storage_notification" "bucket_notification" {
   event_types    = ["OBJECT_FINALIZE"]
   depends_on     = [google_pubsub_topic_iam_member.gcs_publisher]
 }
-
-# --- BigQuery ---
 
 resource "google_bigquery_dataset" "off_dataset" {
   dataset_id                 = "off"
@@ -47,8 +39,8 @@ resource "google_bigquery_dataset" "off_dataset" {
   delete_contents_on_destroy = true
 
   labels = {
-    env = "production"
-    app = "retail-benchmark"
+    env = var.env_name
+    app = var.app_name
   }
 }
 
