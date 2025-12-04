@@ -1,0 +1,5 @@
+dataformCoreVersion: 3.0.39
+defaultProject: itg-data-solutions-fabric-dv
+defaultLocation: europe-west1
+defaultDataset: "off"
+defaultAssertionDataset: off_assertions

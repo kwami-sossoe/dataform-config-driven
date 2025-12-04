@@ -1,0 +1,11 @@
+{
+  "description": "Aggregated nutrition metrics by category",
+  "type": "table",
+  "tags": ["mart", "reporting"],
+  "columns": {
+    "main_category": "Category Name",
+    "total_products": "Volume",
+    "avg_sugar": "Average Sugar (g/100g)",
+    "pct_nutriscore_a": "% of products with Score A"
+  }
+}

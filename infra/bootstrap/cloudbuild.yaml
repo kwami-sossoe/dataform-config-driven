@@ -1,0 +1,27 @@
+steps:
+  # 1. Install Node dependencies & Validate Dataform Logic
+  - name: 'node:24'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Pas de 'cd dataform' car package.json est à la racine
+        npm install
+        npx dataform compile
+        npx dataform test
+
+  # 2. Terraform Init (Pointez vers le bon sous-dossier)
+  - name: 'hashicorp/terraform:light'
+    dir: 'infra/bootstrap'
+    args: ['init']
+    env: ['TF_VAR_project_id=$PROJECT_ID']
+
+  # 3. Terraform Apply
+  - name: 'hashicorp/terraform:light'
+    dir: 'infra/bootstrap'
+    args: ['apply', '-auto-approve']
+    env: ['TF_VAR_project_id=$PROJECT_ID']
+    if: 'BRANCH_NAME == "main"'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -1,0 +1,30 @@
+# --- Dataform Specifics ---
+.df-credentials.json
+df/
+.dataform/
+
+# --- Node.js / NPM ---
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# --- Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.backup
+# *.tfvars
+*.tfvars.json
+crash.log
+*.tfplan
+
+# --- OS & IDEs ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Sécurité Générale ---
+*.pem
+*.key
+*.p12

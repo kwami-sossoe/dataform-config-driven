@@ -1,0 +1,26 @@
+{
+  "description": "Nettoyage technique des produits OFF. Parsing JSON des nutriments.",
+  "type": "incremental",
+  "tags": ["staging", "ingestion_daily"],
+  "bigquery": {
+    "partitionBy": "ingestion_date",
+    "clusterBy": ["main_category"]
+  },
+
+  "assertions": {
+    "uniqueKey": ["code"],
+    "nonNull": ["code", "product_name", "ingestion_date"],
+    "rowConditions": [
+      "product_name IS NOT NULL AND LENGTH(product_name) > 1",
+      "LENGTH(code) >= 8"
+    ]
+  },
+  "columns": {
+    "code": "Code barre (PK)",
+    "product_name": "Nom produit",
+    "ingestion_date": "Date de traitement",
+    "main_category": "Catégorie",
+    "sugars_100g": "Sucre (g) pour 100g",
+    "nutriscore_grade": "Score (A-E)"
+  }
+}

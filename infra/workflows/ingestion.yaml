@@ -1,0 +1,83 @@
+main:
+  params: [event]
+  steps:
+    - init:
+        assign:
+          - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - dataset_id: "off"
+          - target_table: "off_raw_dump"
+          - file_bucket: ${event.data.bucket}
+          - file_name: ${event.data.name}
+          - gcs_uri: ${"gs://" + file_bucket + "/" + file_name}
+          
+          - temp_table: ${"temp_" + string(int(sys.now()))}
+          - exec_date: "2023-10-27" 
+
+    # ÉTAPE 1 : Chargement brut (CSV Hack)
+    - load_as_string:
+        call: googleapis.bigquery.v2.jobs.insert
+        args:
+          projectId: ${project_id}
+          body:
+            configuration:
+              load:
+                destinationTable:
+                  projectId: ${project_id}
+                  datasetId: ${dataset_id}
+                  tableId: ${temp_table}
+                sourceUris:
+                  - ${gcs_uri}
+                sourceFormat: "CSV"
+                fieldDelimiter: "~"
+                quote: ""
+                schema:
+                  fields: [{name: "raw_line", type: "STRING"}]
+                createDisposition: "CREATE_IF_NEEDED"
+                writeDisposition: "WRITE_TRUNCATE"
+
+    # ÉTAPE 2 : Construction de la requête SQL
+    - prepare_query:
+        assign:
+          - sql_query: >
+              ${"INSERT INTO `" + project_id + "." + dataset_id + "." + target_table + "` " +
+              "(ingestion_date, filename, raw_json) " +
+              "SELECT " +
+              "DATE('" + exec_date + "'), " +
+              "'" + file_name + "', " +
+              "PARSE_JSON(raw_line, wide_number_mode=>'round') " +
+              "FROM `" + project_id + "." + dataset_id + "." + temp_table + "`"}
+
+    # ÉTAPE 3 : Exécution de la transformation
+    - parse_and_insert:
+        call: googleapis.bigquery.v2.jobs.query
+        args:
+          projectId: ${project_id}
+          body:
+            useLegacySql: false
+            query: ${sql_query}
+
+    # ÉTAPE 4 : Nettoyage Table Temporaire
+    - drop_temp:
+        call: googleapis.bigquery.v2.tables.delete
+        args:
+          projectId: ${project_id}
+          datasetId: ${dataset_id}
+          tableId: ${temp_table}
+
+    # ÉTAPE 5 : Trigger Dataform (Via HTTP REST)
+    - run_dataform:
+        call: http.post
+        args:
+          url: ${"https://dataform.googleapis.com/v1beta1/projects/" + project_id + "/locations/europe-west1/repositories/dataform-config-driven/workflowInvocations"}
+          auth:
+            type: OAuth2
+          body:
+            compilationResult:
+              gitCommitish: "main"
+              codeCompilationConfig:
+                vars:
+                  execution_date: ${exec_date}
+            invocationConfig:
+              includedTags: ["staging", "mart"]
+              transitiveDependentsIncluded: true
+        result: dataform_result
